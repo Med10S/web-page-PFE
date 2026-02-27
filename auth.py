@@ -20,7 +20,7 @@ AUTHENTIK_CONFIG = {
     'authorization_url': 'http://localhost:9090/application/o/authorize/',
     'token_url': 'http://localhost:9090/application/o/token/',
     'userinfo_url': 'http://localhost:9090/application/o/userinfo/',
-    'scope': ['openid', 'profile', 'email', 'groups', 'offline_access'],
+    'scope': ['openid', 'profile', 'email', 'groups', 'offline_access', 'permissions_groupes'],
     'redirect_uri': 'http://localhost:5000/auth/callback'
 }
 
@@ -93,21 +93,30 @@ def get_current_user():
     return None
 
 def get_user_info(access_token):
-    """Appelé UNIQUEMENT lors du callback de login"""
     headers = {'Authorization': f'Bearer {access_token}'}
     try:
         response = requests.get(AUTHENTIK_CONFIG['userinfo_url'], headers=headers, timeout=5)
         if response.status_code != 200:
-            print(f"Erreur Authentik {response.status_code}: {response.text}")
             return None
         
         user_info = response.json()
         groups = user_info.get('groups', [])
         
-        # Mapping des permissions
-        permissions = ['users:read']
-        if 'Admins' in groups:
-            permissions += ['users:update', 'servers:manage']
+        # Récupération des attributs envoyés par Authentik
+        # On suppose que tu as mappé les attributs sous la clé 'group_permissions'
+        group_attrs = user_info.get('permissions', [])
+        
+        # On commence avec une permission de base
+        permissions = []
+        
+        # On parcourt les attributs de chaque groupe pour ajouter les permissions
+        for attr in group_attrs:
+            if 'permissions' in attr:
+                # attr['permissions'] est probablement une liste définie dans Authentik
+                permissions.extend(attr['permissions'])
+
+        # Supprimer les doublons
+        permissions = list(set(permissions))
             
         return {
             'username': user_info.get('preferred_username', user_info.get('sub')),
@@ -116,7 +125,7 @@ def get_user_info(access_token):
             'permissions': permissions
         }
     except Exception as e:
-        print(f"Erreur réseau lors du get_user_info: {e}")
+        print(f"Erreur: {e}")
         return None
 def has_permission(permission):
     """Vérifie si l'utilisateur actuel a une permission spécifique"""

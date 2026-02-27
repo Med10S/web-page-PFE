@@ -72,6 +72,7 @@ def auth_callback():
         
         # Récupère les infos UNE SEULE FOIS
         user_info = get_user_info(token_data['access_token'])
+        print(f"User Info: {user_info}")
         
         # Ajout du print de debug pour vérifier les groupes
         print(f"User groups from Authentik: {user_info.get('groups')}")
@@ -103,7 +104,7 @@ def admin_dashboard():
     user = get_current_user()
     if not user:
         return redirect(url_for('login'))
-    
+    print(f"Accès au dashboard admin pour {user.username} avec rôle {user.role} et permissions {user.permissions}")
     return render_template('admin_dashboard.html', 
                          user=user, 
                          users=USERS_LIST, 
